@@ -23,7 +23,22 @@ public class MyJavaDelegate extends AbstractJavaDelegate implements JavaDelegate
     @Override
     public Object preAuthorize() {
         Logger.info("Hello world! The identifier is: " + getContext().getIdentifier());
-        return true;
+
+        switch (getRequestType()) {
+        case INFORMATION:
+            if (hasValidToken()) {
+                return true;
+            } else {
+                return Map.of("status_code", Long.valueOf(401), "challenge", "Bearer charset=\"UTF-8\"");
+            }
+        case IMAGE:
+        default:
+            if (hasValidCookie()) {
+                return true;
+            } else {
+                return false;
+            }
+        }
     }
 
     @Override
@@ -33,12 +48,24 @@ public class MyJavaDelegate extends AbstractJavaDelegate implements JavaDelegate
 
     @Override
     public Map<String,Object> getExtraIIIF2InformationResponseKeys() {
-        return Collections.emptyMap();
+        return getExtraIIIF3InformationResponseKeys();
+
     }
 
     @Override
     public Map<String,Object> getExtraIIIF3InformationResponseKeys() {
-        return Collections.emptyMap();
+        return Collections.singletonMap(
+            "service", Map.of(
+                "@context", "http://iiif.io/api/auth/1/context.json",
+                "@id", "https://authentication.example.org/login",
+                "profile", "http://iiif.io/api/auth/1/login",
+                "label", "Login to Example Institution",
+                "service", Map.of(
+                    "@id", "https://authentication.example.org/token",
+                    "profile", "http://iiif.io/api/auth/1/token"
+                )
+            )
+        );
     }
 
     @Override
@@ -94,6 +121,43 @@ public class MyJavaDelegate extends AbstractJavaDelegate implements JavaDelegate
     @Override
     public String getMetadata() {
         return null;
+    }
+
+    private enum RequestType {
+        INFORMATION, IMAGE;
+    }
+
+    private RequestType getRequestType() {
+        String requestURI = getContext().getRequestURI();
+
+        if (requestURI.endsWith("info.json")) {
+            return RequestType.INFORMATION;
+        } else {
+            return RequestType.IMAGE;
+        }
+    }
+
+    private boolean hasValidToken() {
+        // In reality, we'd check the Authorization header
+        boolean isValid = Math.round(Math.random()) == 1;
+
+        Logger.debug("Valid token? (random): " + isValid);
+
+        return isValid;
+    }
+
+    private boolean hasValidCookie() {
+        Logger.debug("Checking for a \"iiif-access=authorized\" cookie...");
+
+        if (getContext().getCookies().get("iiif-access").equals("authorized")) {
+            Logger.debug("Cookie found.");
+
+            return true;
+        } else {
+            Logger.debug("Cookie not found.");
+
+            return false;
+        }
     }
 
 }
