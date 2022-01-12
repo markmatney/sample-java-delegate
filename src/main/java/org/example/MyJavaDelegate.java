@@ -4,6 +4,7 @@ import edu.illinois.library.cantaloupe.delegate.AbstractJavaDelegate;
 import edu.illinois.library.cantaloupe.delegate.JavaDelegate;
 import edu.illinois.library.cantaloupe.delegate.Logger;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +24,16 @@ public class MyJavaDelegate extends AbstractJavaDelegate implements JavaDelegate
     @Override
     public Object preAuthorize() {
         Logger.info("Hello world! The identifier is: " + getContext().getIdentifier());
-        return true;
+
+        // 50-50 chance of redirecting to a 1:2 scale resource
+        if (!Arrays.equals(getContext().getScaleConstraint(), new int[] {1, 2}) && Math.round(Math.random()) == 1) {
+            if (getContext().getIdentifier().contains("/")) {
+                Logger.info("🔮🧙 Ah, slashes... I see a 404 in your future...");
+            }
+            return Map.of("status_code", 302L, "scale_numerator", 1L, "scale_denominator", 2L);
+        } else {
+            return true;
+        }
     }
 
     @Override
@@ -73,6 +83,11 @@ public class MyJavaDelegate extends AbstractJavaDelegate implements JavaDelegate
 
     @Override
     public String getJDBCSourceLookupSQL() {
+        return null;
+    }
+
+    @Override
+    public String getJDBCSourceLastModified() {
         return null;
     }
 
